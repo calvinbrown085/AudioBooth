@@ -171,7 +171,7 @@ final class BookPlayerModel: PlayerView.Model {
       Task {
         await configureAudioSession()
         preparePlayerWithLocalBook()
-        audioPlayer.resume(at: book.currentTime)
+        audioPlayer.resume(at: book.progress >= 1.0 ? 0 : book.currentTime)
         setupRemoteCommandCenter()
         startSessionInBackground()
       }
@@ -229,7 +229,7 @@ final class BookPlayerModel: PlayerView.Model {
     audioPlayer.prepare(tracks: info.tracks) { track in
       track.url
     }
-    audioPlayer.resume(at: book.currentTime)
+    audioPlayer.resume(at: book.progress >= 1.0 ? 0 : book.currentTime)
     setupRemoteCommandCenter()
   }
 
@@ -300,7 +300,7 @@ final class BookPlayerModel: PlayerView.Model {
       Task {
         await configureAudioSession()
         preparePlayerWithLocalBook()
-        audioPlayer.resume(at: book.currentTime)
+        audioPlayer.resume(at: book.progress >= 1.0 ? 0 : book.currentTime)
         setupRemoteCommandCenter()
         startSessionInBackground()
       }
