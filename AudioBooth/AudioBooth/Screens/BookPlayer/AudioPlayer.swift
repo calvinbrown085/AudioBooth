@@ -26,7 +26,7 @@ final class AudioPlayer {
     case error(Error?)
   }
 
-  private let player = AVPlayer()
+  private let player = AVQueuePlayer()
   private let eqContext = EQContext()
   private let mediaProgress: MediaProgress
   private var tracks: [Track] = []
@@ -36,7 +36,6 @@ final class AudioPlayer {
   private var timeObserver: Any?
   private var cancellables = Set<AnyCancellable>()
   private var itemObservers = Set<AnyCancellable>()
-  private var preloadedItem: AVPlayerItem?
 
   let events = PassthroughSubject<Event, Never>()
 
@@ -121,22 +120,21 @@ final class AudioPlayer {
 
       let (trackIndex, offset) = trackAndOffset(for: mediaProgress.currentTime)
       currentTrackIndex = trackIndex
-      loadTrack(at: trackIndex, seekTo: offset, autoPlay: true)
+      loadQueue(from: trackIndex, seekTo: offset, autoPlay: true)
     } else if player.currentItem != nil, player.currentItem?.status != .failed {
       seek(to: mediaProgress.currentTime)
       player.play()
     } else {
       let (trackIndex, offset) = trackAndOffset(for: mediaProgress.currentTime)
       currentTrackIndex = trackIndex
-      loadTrack(at: trackIndex, seekTo: offset, autoPlay: true)
+      loadQueue(from: trackIndex, seekTo: offset, autoPlay: true)
     }
   }
 
   func stop() {
     removeTimeObserver()
     player.pause()
-    player.replaceCurrentItem(with: nil)
-    preloadedItem = nil
+    player.removeAllItems()
     events.send(.stateChanged(.stopped))
   }
 
@@ -163,11 +161,34 @@ final class AudioPlayer {
       return
     }
 
-    currentTrackIndex = targetIndex
-    preloadedItem = nil
     guard targetIndex < trackURLs.count else { return }
-    loadTrack(at: targetIndex, seekTo: offset, autoPlay: isPlaying)
-    events.send(.seek(time))
+
+    var existing = player.items()
+    existing.first?.seek(to: .zero, completionHandler: nil)
+    player.removeAllItems()
+
+    if targetIndex < currentTrackIndex {
+      for index in targetIndex..<currentTrackIndex {
+        guard let item = makeItem(at: index) else { continue }
+        player.insert(item, after: nil)
+      }
+    } else {
+      existing = Array(existing.dropFirst(targetIndex - currentTrackIndex))
+    }
+
+    for item in existing {
+      player.insert(item, after: nil)
+    }
+    applyEQToUpcoming()
+
+    currentTrackIndex = targetIndex
+    player.seek(to: CMTime(seconds: offset, preferredTimescale: 1000)) { [weak self] _ in
+      self?.events.send(.seek(time))
+    }
+    if isPlaying {
+      player.play()
+      player.rate = player.defaultRate
+    }
   }
 
   func rebuildQueue(urlResolver: (Track) -> URL?) {
@@ -182,24 +203,25 @@ final class AudioPlayer {
     }
     self.tracks = resolvedTracks
     self.trackURLs = urls
-    preloadedItem = nil
 
     guard !urls.isEmpty else { return }
 
     let (trackIndex, offset) = trackAndOffset(for: mediaProgress.currentTime)
     currentTrackIndex = trackIndex
-    loadTrack(at: trackIndex, seekTo: offset, autoPlay: wasPlaying)
+    loadQueue(from: trackIndex, seekTo: offset, autoPlay: wasPlaying)
   }
 }
 
 private extension AudioPlayer {
-  func loadTrack(at index: Int, seekTo offset: TimeInterval, autoPlay: Bool) {
+  func loadQueue(from index: Int, seekTo offset: TimeInterval, autoPlay: Bool) {
     guard index < trackURLs.count else { return }
 
-    let item = AVPlayerItem(url: trackURLs[index], headers: Audiobookshelf.shared.authentication.server?.customHeaders)
-    observeItem(item)
-    applyEQ(to: item)
-    player.replaceCurrentItem(with: item)
+    player.removeAllItems()
+    for i in index..<trackURLs.count {
+      guard let item = makeItem(at: i) else { continue }
+      player.insert(item, after: nil)
+    }
+    applyEQToUpcoming()
 
     if offset > 0 {
       player.seek(to: CMTime(seconds: offset, preferredTimescale: 1000)) { [weak self] _ in
@@ -213,36 +235,18 @@ private extension AudioPlayer {
     }
   }
 
-  func advanceToNextTrack() {
-    guard currentTrackIndex < tracks.count - 1 else {
-      events.send(.finished)
-      return
-    }
-
-    currentTrackIndex += 1
-    AppLogger.player.debug("Advanced to track \(self.currentTrackIndex)/\(self.tracks.count)")
-
-    if let preloaded = preloadedItem {
-      preloadedItem = nil
-      observeItem(preloaded)
-      player.replaceCurrentItem(with: preloaded)
-      player.play()
-      player.rate = player.defaultRate
-    } else {
-      loadTrack(at: currentTrackIndex, seekTo: 0, autoPlay: true)
-    }
-  }
-
-  func preloadNextTrack() {
-    let nextIndex = currentTrackIndex + 1
-    guard nextIndex < trackURLs.count, preloadedItem == nil else { return }
-
-    let item = AVPlayerItem(
-      url: trackURLs[nextIndex],
+  func makeItem(at index: Int) -> AVPlayerItem? {
+    guard index < trackURLs.count else { return nil }
+    return AVPlayerItem(
+      url: trackURLs[index],
       headers: Audiobookshelf.shared.authentication.server?.customHeaders
     )
-    preloadedItem = item
-    applyEQ(to: item)
+  }
+
+  func applyEQToUpcoming() {
+    for item in player.items().prefix(2) where item.audioMix == nil {
+      applyEQ(to: item)
+    }
   }
 
   func trackAndOffset(for time: TimeInterval) -> (Int, TimeInterval) {
@@ -280,6 +284,24 @@ private extension AudioPlayer {
         }
       }
       .store(in: &cancellables)
+
+    player.publisher(for: \.currentItem)
+      .sink { [weak self] item in
+        self?.handleCurrentItemChange(item)
+      }
+      .store(in: &cancellables)
+  }
+
+  func handleCurrentItemChange(_ item: AVPlayerItem?) {
+    guard let item else { return }
+    if let url = (item.asset as? AVURLAsset)?.url,
+      let index = trackURLs.firstIndex(of: url)
+    {
+      currentTrackIndex = index
+      AppLogger.player.debug("Now playing track \(index)/\(self.tracks.count)")
+    }
+    observeItem(item)
+    applyEQToUpcoming()
   }
 
   func observeItem(_ item: AVPlayerItem) {
@@ -301,21 +323,10 @@ private extension AudioPlayer {
       }
       .store(in: &itemObservers)
 
-    item.publisher(for: \.loadedTimeRanges)
-      .sink { [weak self] ranges in
-        guard
-          let self,
-          let last = ranges.last?.timeRangeValue,
-          item.duration.isNumeric, item.duration.seconds > 0,
-          (last.start + last.duration).seconds >= item.duration.seconds - 0.5
-        else { return }
-        self.preloadNextTrack()
-      }
-      .store(in: &itemObservers)
-
     NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)
       .sink { [weak self] _ in
-        self?.advanceToNextTrack()
+        guard let self, self.currentTrackIndex == self.tracks.count - 1 else { return }
+        self.events.send(.finished)
       }
       .store(in: &itemObservers)
 
@@ -491,7 +502,6 @@ extension AudioPlayer {
     Task { [weak self] in
       guard let self else { return }
       guard let track = try? await item.asset.loadTracks(withMediaType: .audio).first else { return }
-      guard player.currentItem === item || preloadedItem === item else { return }
 
       let context = eqContext
       let clientInfo = Unmanaged.passRetained(context).toOpaque()
