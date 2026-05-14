@@ -27,13 +27,6 @@ struct AuthorsPage: View {
 
   @ToolbarContentBuilder
   var toolbarContent: some ToolbarContent {
-    if #available(iOS 26.0, *) {
-      ToolbarItem(placement: .topBarLeading) {
-        Color.clear
-      }
-      .sharedBackgroundVisibility(.hidden)
-    }
-
     ToolbarItem(placement: .topBarTrailing) {
       Menu {
         ForEach(AuthorsService.SortBy.allCases, id: \.self) { sortBy in

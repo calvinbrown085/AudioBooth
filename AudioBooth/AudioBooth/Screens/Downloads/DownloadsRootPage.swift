@@ -36,7 +36,6 @@ struct DownloadsRootPage: View {
             }
             .pickerStyle(.segmented)
             .controlSize(.large)
-            .font(.subheadline)
             .tint(.primary)
           }
         }

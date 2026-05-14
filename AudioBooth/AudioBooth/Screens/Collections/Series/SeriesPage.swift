@@ -37,13 +37,6 @@ struct SeriesPage: View {
       prompt: "Search books, series, and authors"
     )
     .toolbar {
-      if #available(iOS 26.0, *) {
-        ToolbarItem(placement: .topBarLeading) {
-          Color.clear
-        }
-        .sharedBackgroundVisibility(.hidden)
-      }
-
       ToolbarItem(placement: .topBarTrailing) {
         Menu {
           Toggle(

@@ -32,8 +32,8 @@ struct PodcastsRootPage: View {
             }
             .pickerStyle(.segmented)
             .controlSize(.large)
-            .font(.subheadline)
             .tint(.primary)
+            .fixedSize(horizontal: true, vertical: true)
           }
         }
         .navigationDestination(for: NavigationDestination.self) { destination in
