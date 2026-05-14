@@ -197,6 +197,19 @@ final class CollectionDetailPageModel: CollectionDetailPage.Model {
     }
   }
 
+  override func onPlayAll() {
+    let items = books.map { book in
+      QueueItem(
+        bookID: book.id,
+        title: book.title,
+        details: book.author,
+        coverURL: book.cover.url,
+        podcastID: book.podcastID
+      )
+    }
+    playerManager.playAll(items)
+  }
+
   override func onPlayItem(_ item: BookCard.Model) {
     if playerManager.current?.id == item.id {
       if let currentPlayer = playerManager.current as? BookPlayerModel {

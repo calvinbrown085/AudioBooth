@@ -253,6 +253,7 @@ struct CollectionDetailPage: View {
           model.onDelete(at: indexSet)
         }
       }
+      .listRowBackground(Color.clear)
     }
     .listStyle(.plain)
     .environment(\.itemDisplayMode, .row)
@@ -320,9 +321,30 @@ struct CollectionDetailPage: View {
         }
       }
 
-      Text("^[\(model.books.count) item](inflect: true)")
-        .font(.caption)
-        .foregroundStyle(.tertiary)
+      HStack {
+        Text("^[\(model.books.count) item](inflect: true)")
+          .font(.caption)
+          .foregroundStyle(.tertiary)
+
+        Spacer()
+
+        if !model.books.isEmpty {
+          Button(action: model.onPlayAll) {
+            HStack(spacing: 4) {
+              Image(systemName: "play.fill")
+              Text("Play All")
+            }
+            .font(.caption)
+            .fontWeight(.medium)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .foregroundStyle(Color.accentColor)
+            .background(Color.accentColor.opacity(0.15))
+            .clipShape(Capsule())
+          }
+          .buttonStyle(.plain)
+        }
+      }
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
@@ -351,6 +373,7 @@ extension CollectionDetailPage {
     func onDelete(at indexSet: IndexSet) {}
     func onTogglePin() {}
     func onPlayItem(_ item: BookCard.Model) {}
+    func onPlayAll() {}
     func onAutoDownloadChanged(_ mode: AutoDownloadMode) {}
     func onRemoveCompletedChanged(_ value: Bool) {}
     func onDownloadAllTapped() {}

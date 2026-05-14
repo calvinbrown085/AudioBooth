@@ -529,6 +529,13 @@ extension PlayerManager {
     queue.removeAll()
   }
 
+  func playAll(_ items: [QueueItem]) {
+    guard let first = items.first else { return }
+    clearQueue()
+    queue = Array(items.dropFirst())
+    playItem(first, autoPlay: true)
+  }
+
   func playNext(autoPlay: Bool = true) {
     if !queue.isEmpty, userPreferences.autoPlayNextInQueue {
       let nextItem = queue.removeFirst()
