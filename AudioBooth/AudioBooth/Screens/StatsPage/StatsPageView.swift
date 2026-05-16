@@ -134,7 +134,11 @@ struct StatsPageView: View {
             Text("\(minutes)").tag(minutes)
           }
         }
+        #if os(iOS) && !targetEnvironment(macCatalyst)
         .pickerStyle(.wheel)
+        #else
+        .pickerStyle(.menu)
+        #endif
 
         Text(verbatim: "1440")
           .monospacedDigit()

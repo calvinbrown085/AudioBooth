@@ -58,7 +58,7 @@ struct TimerPickerSheet: View {
           RoundedRectangle(cornerRadius: 8)
             .stroke(isSelected ? Color.accentColor : .primary.opacity(0.3), lineWidth: isSelected ? 2 : 1)
         }
-        .contentShape(Rectangle())
+        .interactiveTarget()
     }
     .buttonStyle(.plain)
   }
@@ -88,7 +88,8 @@ struct TimerPickerSheet: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 8)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity)
+        .interactiveTarget()
       }
       .buttonStyle(.plain)
 
@@ -101,7 +102,11 @@ struct TimerPickerSheet: View {
                   Text("\(i)").tag(i)
                 }
               }
-              .pickerStyle(WheelPickerStyle())
+              #if os(iOS) && !targetEnvironment(macCatalyst)
+              .pickerStyle(.wheel)
+              #else
+              .pickerStyle(.menu)
+              #endif
               .onChange(of: model.customHours) { oldValue, newValue in
                 if oldValue == 0 && newValue > 0 && model.customMinutes == 0 {
                   model.customMinutes = 1
@@ -122,7 +127,11 @@ struct TimerPickerSheet: View {
                   Text("\(i)").tag(i)
                 }
               }
-              .pickerStyle(WheelPickerStyle())
+              #if os(iOS) && !targetEnvironment(macCatalyst)
+              .pickerStyle(.wheel)
+              #else
+              .pickerStyle(.menu)
+              #endif
 
               Text(model.customMinutes == 1 ? "min" : "mins")
                 .font(.system(size: 16))
@@ -130,7 +139,9 @@ struct TimerPickerSheet: View {
             }
           }
           .padding(.horizontal, 10)
+          #if os(iOS) && !targetEnvironment(macCatalyst)
           .frame(height: 120)
+          #endif
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 8)
@@ -176,7 +187,7 @@ struct TimerPickerSheet: View {
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
+        .interactiveTarget()
       }
 
       HStack(spacing: 16) {
@@ -189,7 +200,7 @@ struct TimerPickerSheet: View {
                 .font(.caption)
                 .foregroundColor(.primary)
             }
-            .contentShape(Circle())
+            .interactiveTarget()
         }
         .disabled(chapterCount < 2)
 
@@ -202,7 +213,7 @@ struct TimerPickerSheet: View {
                 .font(.caption)
                 .foregroundColor(.primary)
             }
-            .contentShape(Circle())
+            .interactiveTarget()
         }
         .disabled(chapterCount >= model.maxRemainingChapters)
       }
@@ -241,9 +252,9 @@ struct TimerPickerSheet: View {
             .font(.system(size: 16, weight: .medium))
             .foregroundColor(.primary)
         }
+        .interactiveTarget()
     }
     .buttonStyle(.plain)
-    .contentShape(Rectangle())
     .padding(.horizontal, 20)
   }
 
