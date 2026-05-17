@@ -18,12 +18,17 @@ struct SkipRewindPreferencesView: View {
       get: { preferences.smartRewindMaxInterval > 0 || preferences.smartRewindInterval > 0 },
       set: { isOn in
         if isOn {
-          preferences.smartRewindInterval = preferences.smartRewindInterval > 0 ? preferences.smartRewindInterval : 6
-          preferences.smartRewindMaxInterval =
-            preferences.smartRewindMaxInterval > 0 ? preferences.smartRewindMaxInterval : 30
+          let restoredMin = preferences.smartRewindInterval > 0 ? preferences.smartRewindInterval : 6
+          let restoredMax = preferences.smartRewindMaxInterval > 0 ? preferences.smartRewindMaxInterval : 30
+          preferences.smartRewindInterval = restoredMin
+          preferences.smartRewindMaxInterval = restoredMax
+          rewindMin = restoredMin
+          rewindMax = restoredMax
         } else {
           preferences.smartRewindInterval = 0
           preferences.smartRewindMaxInterval = 0
+          rewindMin = 0
+          rewindMax = 0
         }
       }
     )
@@ -151,8 +156,10 @@ struct SkipRewindPreferencesView: View {
     .background(theme.colors.background.page)
     .navigationTitle("Skip & Rewind")
     .onDisappear {
-      preferences.smartRewindInterval = rewindMin
-      preferences.smartRewindMaxInterval = rewindMax
+      if autoRewindEnabled.wrappedValue {
+        preferences.smartRewindInterval = rewindMin
+        preferences.smartRewindMaxInterval = rewindMax
+      }
       preferences.smartRewindAfterPauseThreshold = pauseThreshold
     }
   }
