@@ -75,4 +75,74 @@ public final class PodcastsService {
     let response = try await networkService.send(request)
     return response.value
   }
+
+  public func fetchFeed(rssURL: String) async throws -> Podcast.Feed {
+    guard let networkService = audiobookshelf.networkService else {
+      throw Audiobookshelf.AudiobookshelfError.networkError(
+        "Network service not configured. Please login first."
+      )
+    }
+
+    struct FeedRequest: Encodable {
+      let rssFeed: String
+    }
+
+    struct FeedResponse: Decodable {
+      let podcast: Podcast.Feed
+    }
+
+    let request = NetworkRequest<FeedResponse>(
+      path: "/api/podcasts/feed",
+      method: .post,
+      body: FeedRequest(rssFeed: rssURL)
+    )
+
+    let response = try await networkService.send(request)
+    return response.value.podcast
+  }
+
+  public func downloadEpisodes(
+    podcastID: String,
+    episodes: [Podcast.Feed.Episode]
+  ) async throws {
+    guard let networkService = audiobookshelf.networkService else {
+      throw Audiobookshelf.AudiobookshelfError.networkError(
+        "Network service not configured. Please login first."
+      )
+    }
+
+    let payload = episodes.map { episode -> Podcast.Feed.Episode in
+      Podcast.Feed.Episode(
+        guid: episode.guid,
+        title: episode.title,
+        subtitle: episode.subtitle,
+        description: episode.description,
+        descriptionPlain: episode.descriptionPlain,
+        pubDate: episode.pubDate,
+        episodeType: episode.episodeType,
+        season: episode.season,
+        episode: episode.episode,
+        author: episode.author,
+        duration: episode.duration,
+        durationSeconds: episode.durationSeconds,
+        explicit: episode.explicit,
+        publishedAt: episode.publishedAt,
+        enclosure: episode.enclosure,
+        chaptersUrl: episode.chaptersUrl,
+        chaptersType: episode.chaptersType,
+        chapters: episode.chapters ?? [],
+        cleanUrl: episode.cleanUrl ?? episode.enclosure?.url,
+        isDownloading: episode.isDownloading ?? false,
+        isDownloaded: episode.isDownloaded ?? false
+      )
+    }
+
+    let request = NetworkRequest<Data>(
+      path: "/api/podcasts/\(podcastID)/download-episodes",
+      method: .post,
+      body: payload
+    )
+
+    _ = try await networkService.send(request)
+  }
 }

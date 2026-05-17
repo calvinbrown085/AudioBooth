@@ -77,7 +77,7 @@ final class LibraryPageModel: LibraryPage.Model {
         isRoot: false,
         title: name
       )
-    case .author, .book, .playlist, .collection, .offline, .stats, .podcast:
+    case .author, .book, .playlist, .collection, .offline, .stats, .podcast, .podcastFeed:
       fatalError("LibraryPageModel cannot be initialized with a \(destination) destination")
     }
 

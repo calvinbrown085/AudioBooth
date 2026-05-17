@@ -47,6 +47,7 @@ public final class Server: @unchecked Sendable {
   enum StorageKeys {
     static let username = "username"
     static let permissions = "permissions"
+    static let userType = "userType"
   }
 
   public var username: String? {
@@ -70,6 +71,20 @@ public final class Server: @unchecked Sendable {
         storage.set(data, forKey: StorageKeys.permissions)
       } else {
         storage.removeObject(forKey: StorageKeys.permissions)
+      }
+    }
+  }
+
+  public var userType: UserType? {
+    get {
+      guard let raw = storage.string(forKey: StorageKeys.userType) else { return nil }
+      return UserType(rawValue: raw)
+    }
+    set {
+      if let newValue {
+        storage.set(newValue.rawValue, forKey: StorageKeys.userType)
+      } else {
+        storage.removeObject(forKey: StorageKeys.userType)
       }
     }
   }

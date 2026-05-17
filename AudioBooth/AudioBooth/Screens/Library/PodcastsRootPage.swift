@@ -42,6 +42,15 @@ struct PodcastsRootPage: View {
             BookDetailsView(model: BookDetailsViewModel(bookID: id))
           case .podcast(let id, let episodeID):
             PodcastDetailsView(model: PodcastDetailsViewModel(podcastID: id, episodeID: episodeID))
+          case .podcastFeed(let id, let podcastTitle, let coverURL, let feedURL):
+            PodcastFeedView(
+              model: PodcastFeedViewModel(
+                podcastID: id,
+                podcastTitle: podcastTitle,
+                coverURL: coverURL,
+                feedURL: feedURL
+              )
+            )
           case .playlist(let id):
             CollectionDetailPage(model: CollectionDetailPageModel(collectionID: id, mode: .playlists))
           case .genre, .tag:

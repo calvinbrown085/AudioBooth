@@ -2,9 +2,19 @@ import Foundation
 
 public struct User: Codable, Sendable {
   public let username: String?
+  public let type: UserType?
   public let mediaProgress: [MediaProgress]
   public let bookmarks: [Bookmark]
   public let permissions: Permissions
+}
+
+public enum UserType: String, Codable, Sendable {
+  case root, admin, user, guest, unknown
+
+  public init(from decoder: Decoder) throws {
+    let raw = try decoder.singleValueContainer().decode(String.self)
+    self = UserType(rawValue: raw) ?? .unknown
+  }
 }
 
 extension User {

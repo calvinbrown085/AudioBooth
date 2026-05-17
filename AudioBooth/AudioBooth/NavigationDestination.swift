@@ -12,6 +12,7 @@ enum NavigationDestination: Hashable {
   case tag(name: String, libraryID: String? = nil)
   case playlist(id: String)
   case collection(id: String)
+  case podcastFeed(podcastID: String, podcastTitle: String, coverURL: URL?, feedURL: String)
   case offline
   case stats
 }

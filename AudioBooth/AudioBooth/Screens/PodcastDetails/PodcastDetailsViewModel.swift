@@ -250,6 +250,7 @@ final class PodcastDetailsViewModel: PodcastDetailsView.Model {
       language = podcast.language
       podcastType = podcast.podcastType
       episodeCount = podcast.numEpisodes
+      feedURL = podcast.feedURL
 
       apiEpisodes = podcast.media.episodes ?? []
 

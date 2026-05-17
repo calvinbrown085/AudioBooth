@@ -64,6 +64,29 @@ struct PodcastDetailsView: View {
       }
     }
     .toolbar {
+      if let feedURL = model.feedURL,
+        let userType = audiobookshelf.authentication.server?.userType,
+        [.root, .admin].contains(userType)
+      {
+        ToolbarItem(placement: .topBarTrailing) {
+          NavigationLink(
+            value: NavigationDestination.podcastFeed(
+              podcastID: model.podcastID,
+              podcastTitle: model.title,
+              coverURL: model.coverURL,
+              feedURL: feedURL
+            )
+          ) {
+            Label("Find Episodes", systemImage: "plus.magnifyingglass")
+          }
+          .tint(.primary)
+        }
+
+        if #available(iOS 26.0, *) {
+          ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        }
+      }
+
       if audiobookshelf.authentication.server?.permissions?.download == true {
         ToolbarItem(placement: .topBarTrailing) {
           ConfirmationButton(
@@ -594,6 +617,7 @@ extension PodcastDetailsView {
     var podcastType: String?
     var durationText: String?
     var episodeCount: Int
+    var feedURL: String?
 
     var episodes: [Episode]
     var searchText: String

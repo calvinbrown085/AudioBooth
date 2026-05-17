@@ -395,6 +395,7 @@ public final class AuthenticationService: ObservableObject {
       let authorize = response.value
       server?.permissions = authorize.user.permissions
       server?.username = authorize.user.username
+      server?.userType = authorize.user.type
       audiobookshelf.misc.ereaderDevices = authorize.ereaderDevices
       audiobookshelf.libraries.sortingIgnorePrefix = authorize.serverSettings.sortingIgnorePrefix
       return authorize
@@ -424,6 +425,7 @@ public final class AuthenticationService: ObservableObject {
       if let username = user.username {
         server?.username = username
       }
+      server?.userType = user.type
       return user
     } catch {
       throw Audiobookshelf.AudiobookshelfError.networkError(

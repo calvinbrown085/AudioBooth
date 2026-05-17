@@ -116,3 +116,120 @@ extension Podcast.Media.Metadata: Codable {
     type = try container.decodeIfPresent(String.self, forKey: .type)
   }
 }
+
+extension Podcast {
+  public struct Feed: Codable, Sendable {
+    public let metadata: Metadata
+    public let episodes: [Episode]
+
+    public struct Metadata: Codable, Sendable {
+      public let title: String?
+      public let author: String?
+      public let description: String?
+      public let descriptionPlain: String?
+      public let image: String?
+      public let feedUrl: String?
+      public let language: String?
+      public let type: String?
+      public let link: String?
+    }
+
+    public struct Episode: Codable, Sendable, Identifiable {
+      public let guid: String
+      public let title: String
+      public let subtitle: String?
+      public let description: String?
+      public let descriptionPlain: String?
+      public let pubDate: String?
+      public let episodeType: String?
+      public let season: String?
+      public let episode: String?
+      public let author: String?
+      public let duration: String?
+      public let durationSeconds: Double?
+      public let explicit: String?
+      public let publishedAt: Int64?
+      public let enclosure: Enclosure?
+      public let chaptersUrl: String?
+      public let chaptersType: String?
+      public let chapters: [Chapter]?
+      public let cleanUrl: String?
+      public let isDownloading: Bool?
+      public let isDownloaded: Bool?
+
+      public var id: String { guid }
+
+      public init(
+        guid: String,
+        title: String,
+        subtitle: String? = nil,
+        description: String? = nil,
+        descriptionPlain: String? = nil,
+        pubDate: String? = nil,
+        episodeType: String? = nil,
+        season: String? = nil,
+        episode: String? = nil,
+        author: String? = nil,
+        duration: String? = nil,
+        durationSeconds: Double? = nil,
+        explicit: String? = nil,
+        publishedAt: Int64? = nil,
+        enclosure: Enclosure? = nil,
+        chaptersUrl: String? = nil,
+        chaptersType: String? = nil,
+        chapters: [Chapter]? = nil,
+        cleanUrl: String? = nil,
+        isDownloading: Bool? = nil,
+        isDownloaded: Bool? = nil
+      ) {
+        self.guid = guid
+        self.title = title
+        self.subtitle = subtitle
+        self.description = description
+        self.descriptionPlain = descriptionPlain
+        self.pubDate = pubDate
+        self.episodeType = episodeType
+        self.season = season
+        self.episode = episode
+        self.author = author
+        self.duration = duration
+        self.durationSeconds = durationSeconds
+        self.explicit = explicit
+        self.publishedAt = publishedAt
+        self.enclosure = enclosure
+        self.chaptersUrl = chaptersUrl
+        self.chaptersType = chaptersType
+        self.chapters = chapters
+        self.cleanUrl = cleanUrl
+        self.isDownloading = isDownloading
+        self.isDownloaded = isDownloaded
+      }
+
+      public struct Enclosure: Codable, Sendable {
+        public let length: String?
+        public let type: String?
+        public let url: String
+
+        public init(length: String? = nil, type: String? = nil, url: String) {
+          self.length = length
+          self.type = type
+          self.url = url
+        }
+      }
+
+      public struct Chapter: Codable, Sendable {
+        public let id: Int?
+        public let start: Double?
+        public let end: Double?
+        public let title: String?
+
+        public init(id: Int? = nil, start: Double? = nil, end: Double? = nil, title: String? = nil) {
+          self.id = id
+          self.start = start
+          self.end = end
+          self.title = title
+        }
+      }
+    }
+  }
+}
