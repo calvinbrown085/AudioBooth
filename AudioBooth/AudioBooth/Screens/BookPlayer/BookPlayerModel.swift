@@ -889,6 +889,11 @@ extension BookPlayerModel {
 
   private func onTimeChanged(_ globalTime: TimeInterval) {
     if globalTime > 0 || self.mediaProgress.currentTime == 0 {
+      if abs(self.mediaProgress.currentTime - globalTime) > 5 {
+        AppLogger.player.debug(
+          "onTimeChanged overwrite: mediaProgress.currentTime=\(self.mediaProgress.currentTime) -> globalTime=\(globalTime) isPlaying=\(self.isPlaying)"
+        )
+      }
       self.mediaProgress.currentTime = globalTime
     }
 

@@ -147,6 +147,15 @@ extension MediaProgress {
       finishedAt = remoteFinishedAt
     }
 
+    let willApply = remoteLastUpdate > lastUpdate
+    AppLogger.sync.debug(
+      """
+      MediaProgress.update bookID=\(bookID) apply=\(willApply) \
+      local(lastUpdate=\(lastUpdate.timeIntervalSince1970), currentTime=\(currentTime), progress=\(progress), isFinished=\(isFinished)) \
+      remote(lastUpdate=\(remoteLastUpdate.timeIntervalSince1970), currentTime=\(remoteCurrentTime), progress=\(remoteProgress), isFinished=\(apiProgress.isFinished))
+      """
+    )
+
     if remoteLastUpdate > lastUpdate {
       if remoteCurrentTime != currentTime {
         PlaybackHistory.record(
@@ -321,6 +330,10 @@ extension MediaProgress {
     let remoteBookIDs = Set(userData.mediaProgress.map { $0.episodeId ?? $0.libraryItemId })
     var progressMap = Dictionary(
       uniqueKeysWithValues: allLocalProgress.map { ($0.bookID, $0) }
+    )
+
+    AppLogger.sync.debug(
+      "MediaProgress.syncFromAPI start: local=\(allLocalProgress.count) remote=\(userData.mediaProgress.count) currentPlayingBookID=\(currentPlayingBookID ?? "nil")"
     )
 
     for apiProgress in userData.mediaProgress {
