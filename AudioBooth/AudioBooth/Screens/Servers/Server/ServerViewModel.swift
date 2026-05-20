@@ -485,10 +485,17 @@ final class ServerViewModel: ServerView.Model {
       self.libraries = fetchedLibraries.map({ Library(id: $0.id, name: $0.name) })
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
-      if libraries.count == 1, let singleLibrary = libraries.first, selectedLibrary == nil,
-        audiobookshelf.libraries.current == nil
-      {
-        onLibraryTapped(singleLibrary)
+      let currentLibraryID = audiobookshelf.libraries.current?.id
+      let hasStaleSelection =
+        currentLibraryID != nil
+        && !fetchedLibraries.contains(where: { $0.id == currentLibraryID })
+
+      if selectedLibrary == nil || hasStaleSelection {
+        if let defaultID = audiobookshelf.authentication.servers[connectionID]?.defaultLibraryID,
+          let defaultLibrary = libraries.first(where: { $0.id == defaultID })
+        {
+          onLibraryTapped(defaultLibrary)
+        }
       }
     } catch {
       Toast(error: "Failed to load libraries").show()

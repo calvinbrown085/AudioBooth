@@ -6,6 +6,19 @@ public struct User: Codable, Sendable {
   public let mediaProgress: [MediaProgress]
   public let bookmarks: [Bookmark]
   public let permissions: Permissions
+  public let token: String?
+  public let accessToken: String?
+  public let refreshToken: String?
+
+  public var credentials: Credentials? {
+    if let accessToken, let refreshToken, let expiresAt = JWT(accessToken)?.exp {
+      return .bearer(accessToken: accessToken, refreshToken: refreshToken, expiresAt: expiresAt)
+    }
+    if let token {
+      return .legacy(token: token)
+    }
+    return nil
+  }
 }
 
 public enum UserType: String, Codable, Sendable {

@@ -3,22 +3,6 @@ import Foundation
 public final class MiscService {
   private let audiobookshelf: Audiobookshelf
 
-  enum Keys {
-    static let ereaderDevices = "audiobookshelf_ereader_devices"
-  }
-
-  public var ereaderDevices: [EreaderDevice] {
-    get {
-      guard let data = UserDefaults.standard.data(forKey: Keys.ereaderDevices) else { return [] }
-      let ereaderDevices = try? JSONDecoder().decode([EreaderDevice].self, from: data)
-      return ereaderDevices ?? []
-    }
-    set {
-      guard let data = try? JSONEncoder().encode(newValue) else { return }
-      UserDefaults.standard.set(data, forKey: Keys.ereaderDevices)
-    }
-  }
-
   init(audiobookshelf: Audiobookshelf) {
     self.audiobookshelf = audiobookshelf
   }

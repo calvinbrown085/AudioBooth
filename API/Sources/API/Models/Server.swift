@@ -44,53 +44,24 @@ public final class Server: @unchecked Sendable {
 
   public let storage: UserDefaults
 
-  enum StorageKeys {
-    static let username = "username"
-    static let permissions = "permissions"
-    static let userType = "userType"
-  }
-
-  public var username: String? {
-    get { storage.string(forKey: StorageKeys.username) }
-    set {
-      if let newValue {
-        storage.set(newValue, forKey: StorageKeys.username)
-      } else {
-        storage.removeObject(forKey: StorageKeys.username)
-      }
-    }
-  }
-
-  public var permissions: User.Permissions? {
-    get {
-      guard let data = storage.data(forKey: StorageKeys.permissions) else { return nil }
-      return try? JSONDecoder().decode(User.Permissions.self, from: data)
-    }
-    set {
-      if let newValue, let data = try? JSONEncoder().encode(newValue) {
-        storage.set(data, forKey: StorageKeys.permissions)
-      } else {
-        storage.removeObject(forKey: StorageKeys.permissions)
-      }
-    }
-  }
-
-  public var userType: UserType? {
-    get {
-      guard let raw = storage.string(forKey: StorageKeys.userType) else { return nil }
-      return UserType(rawValue: raw)
-    }
-    set {
-      if let newValue {
-        storage.set(newValue.rawValue, forKey: StorageKeys.userType)
-      } else {
-        storage.removeObject(forKey: StorageKeys.userType)
-      }
-    }
-  }
+  @ObservationIgnored @Stored("username") public var username: String? = nil
+  @ObservationIgnored @Stored("permissions") public var permissions: User.Permissions? = nil
+  @ObservationIgnored @Stored("userType") public var userType: UserType? = nil
+  @ObservationIgnored @Stored("defaultLibraryID") public var defaultLibraryID: String? = nil
+  @ObservationIgnored @Stored("ereaderDevices") public var ereaderDevices: [EreaderDevice] = []
+  @ObservationIgnored @Stored("sortingIgnorePrefix") public var sortingIgnorePrefix: Bool = false
 
   public func clearStorage() {
     storage.removePersistentDomain(forName: "connection.\(id)")
+  }
+
+  public func update(with authorize: Authorize) {
+    permissions = authorize.user.permissions
+    username = authorize.user.username
+    userType = authorize.user.type
+    defaultLibraryID = authorize.userDefaultLibraryId
+    ereaderDevices = authorize.ereaderDevices
+    sortingIgnorePrefix = authorize.serverSettings.sortingIgnorePrefix
   }
 
   public init(connection: Connection) {
@@ -102,5 +73,44 @@ public final class Server: @unchecked Sendable {
     self.alternativeURL = connection.alternativeURL
     self.urlMode = connection.isUsingAlternativeURL ? .alternative : .primary
     self.storage = UserDefaults(suiteName: "connection.\(connection.id)") ?? .standard
+  }
+}
+
+extension Server {
+  @propertyWrapper
+  public struct Stored<Value: Codable> {
+    let key: String
+    let defaultValue: Value
+
+    public init(wrappedValue: Value, _ key: String) {
+      self.key = key
+      self.defaultValue = wrappedValue
+    }
+
+    @available(*, unavailable, message: "@Server.Stored is only usable on Server")
+    public var wrappedValue: Value {
+      get { fatalError() }
+      set { fatalError() }
+    }
+
+    public static subscript(
+      _enclosingInstance instance: Server,
+      wrapped wrappedKeyPath: ReferenceWritableKeyPath<Server, Value>,
+      storage storageKeyPath: ReferenceWritableKeyPath<Server, Stored<Value>>
+    ) -> Value {
+      get {
+        let wrapper = instance[keyPath: storageKeyPath]
+        guard let data = instance.storage.data(forKey: wrapper.key),
+          let value = try? JSONDecoder().decode(Value.self, from: data)
+        else { return wrapper.defaultValue }
+        return value
+      }
+      set {
+        let wrapper = instance[keyPath: storageKeyPath]
+        if let data = try? JSONEncoder().encode(newValue) {
+          instance.storage.set(data, forKey: wrapper.key)
+        }
+      }
+    }
   }
 }

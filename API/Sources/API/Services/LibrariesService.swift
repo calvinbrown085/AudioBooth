@@ -15,7 +15,6 @@ public final class LibrariesService: ObservableObject, @unchecked Sendable {
       "filterdata_\(libraryID)"
     }
     static let libraries = "libraries"
-    static let sortingIgnorePrefix = "sortingIgnorePrefix"
   }
 
   init(audiobookshelf: Audiobookshelf) {
@@ -65,15 +64,6 @@ public final class LibrariesService: ObservableObject, @unchecked Sendable {
         audiobookshelf.authentication.server?.storage.removeObject(forKey: Keys.library)
       }
       ImagePipeline.shared.cache.removeAll()
-    }
-  }
-
-  public var sortingIgnorePrefix: Bool {
-    get {
-      UserDefaults.standard.bool(forKey: Keys.sortingIgnorePrefix)
-    }
-    set {
-      UserDefaults.standard.set(newValue, forKey: Keys.sortingIgnorePrefix)
     }
   }
 

@@ -284,7 +284,7 @@ final class LibraryPageModel: LibraryPage.Model {
       )
 
       var newItems = [LibraryView.Item]()
-      let ignorePrefix = isRoot && audiobookshelf.libraries.sortingIgnorePrefix
+      let ignorePrefix = isRoot && (audiobookshelf.authentication.server?.sortingIgnorePrefix ?? false)
       for book in response.results {
         if let collapsedSeries = book.collapsedSeries {
           let model = SeriesCardModel(collapsedSeries, sortingIgnorePrefix: ignorePrefix)

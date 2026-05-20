@@ -61,7 +61,7 @@ final class SeriesPageModel: SeriesPage.Model {
         ascending: ascending
       )
 
-      let ignorePrefix = Audiobookshelf.shared.libraries.sortingIgnorePrefix
+      let ignorePrefix = Audiobookshelf.shared.authentication.server?.sortingIgnorePrefix ?? false
       let seriesCards = response.results.map { series in
         SeriesCardModel(series: series, sortingIgnorePrefix: ignorePrefix)
       }

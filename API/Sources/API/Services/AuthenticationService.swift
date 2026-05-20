@@ -72,20 +72,11 @@ public final class AuthenticationService: ObservableObject {
       let password: String
     }
 
-    struct Response: Codable {
-      struct User: Codable {
-        let token: String?
-        let accessToken: String?
-        let refreshToken: String?
-      }
-      let user: User
-    }
-
     let loginRequest = LoginRequest(username: username, password: password)
     var headers = customHeaders
     headers["x-return-tokens"] = "true"
 
-    let request = NetworkRequest<Response>(
+    let request = NetworkRequest<Authorize>(
       path: "/login",
       method: .post,
       body: loginRequest,
@@ -93,30 +84,18 @@ public final class AuthenticationService: ObservableObject {
     )
 
     let response = try await loginService.send(request)
-    let user = response.value.user
-
-    let authToken: Credentials
-    if let accessToken = user.accessToken, let refreshToken = user.refreshToken {
-      guard let expiresAt = JWT(accessToken)?.exp else {
-        throw Audiobookshelf.AudiobookshelfError.loginFailed("Failed to decode JWT token")
-      }
-      authToken = .bearer(
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-        expiresAt: expiresAt
-      )
-    } else if let token = user.token {
-      authToken = .legacy(token: token)
-    } else {
+    guard let authToken = response.value.user.credentials else {
       throw Audiobookshelf.AudiobookshelfError.loginFailed("No token received from server")
     }
 
-    return try upsertConnection(
+    let connectionID = try upsertConnection(
       serverURL: baseURL,
       token: authToken,
       customHeaders: customHeaders,
       existingServerID: existingServerID
     )
+    servers[connectionID]?.update(with: response.value)
+    return connectionID
   }
 
   public func loginWithOIDC(
@@ -140,15 +119,6 @@ public final class AuthenticationService: ObservableObject {
 
     let loginService = NetworkService(baseURL: baseURL)
 
-    struct Response: Codable {
-      struct User: Codable {
-        let token: String?
-        let accessToken: String?
-        let refreshToken: String?
-      }
-      let user: User
-    }
-
     var query: [String: String] = [
       "code": code,
       "code_verifier": verifier,
@@ -170,7 +140,7 @@ public final class AuthenticationService: ObservableObject {
     )
     AppLogger.authentication.debug("Cookie header: \(cookieString)")
 
-    let request = NetworkRequest<Response>(
+    let request = NetworkRequest<Authorize>(
       path: "/auth/openid/callback",
       method: .get,
       query: query,
@@ -179,34 +149,19 @@ public final class AuthenticationService: ObservableObject {
 
     do {
       let response = try await loginService.send(request)
-      let user = response.value.user
-
-      let authToken: Credentials
-      if let accessToken = user.accessToken, let refreshToken = user.refreshToken {
-        guard let expiresAt = JWT(accessToken)?.exp else {
-          throw Audiobookshelf.AudiobookshelfError.loginFailed("Failed to decode JWT token")
-        }
-        authToken = .bearer(
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-          expiresAt: expiresAt
-        )
-        AppLogger.authentication.info("OIDC login successful, received JWT tokens")
-      } else if let token = user.token {
-        authToken = .legacy(token: token)
-        AppLogger.authentication.info(
-          "OIDC login successful, received legacy token of length: \(token.count)"
-        )
-      } else {
+      guard let authToken = response.value.user.credentials else {
         throw Audiobookshelf.AudiobookshelfError.loginFailed("No token received from server")
       }
+      AppLogger.authentication.info("OIDC login successful")
 
-      return try upsertConnection(
+      let connectionID = try upsertConnection(
         serverURL: baseURL,
         token: authToken,
         customHeaders: customHeaders,
         existingServerID: existingServerID
       )
+      servers[connectionID]?.update(with: response.value)
+      return connectionID
     } catch {
       AppLogger.authentication.error(
         "OIDC login request failed: \(error.localizedDescription)"
@@ -393,11 +348,7 @@ public final class AuthenticationService: ObservableObject {
     do {
       let response = try await networkService.send(request)
       let authorize = response.value
-      server?.permissions = authorize.user.permissions
-      server?.username = authorize.user.username
-      server?.userType = authorize.user.type
-      audiobookshelf.misc.ereaderDevices = authorize.ereaderDevices
-      audiobookshelf.libraries.sortingIgnorePrefix = authorize.serverSettings.sortingIgnorePrefix
+      server?.update(with: authorize)
       return authorize
     } catch {
       throw Audiobookshelf.AudiobookshelfError.networkError(
@@ -493,20 +444,22 @@ public final class AuthenticationService: ObservableObject {
     headers["Authorization"] = token.bearer
 
     let validateService = NetworkService(baseURL: baseURL)
-    let request = NetworkRequest<User>(
-      path: "/api/me",
-      method: .get,
+    let request = NetworkRequest<Authorize>(
+      path: "/api/authorize",
+      method: .post,
       headers: headers
     )
 
-    _ = try await validateService.send(request)
+    let response = try await validateService.send(request)
 
-    return try upsertConnection(
+    let connectionID = try upsertConnection(
       serverURL: baseURL,
       token: token,
       customHeaders: customHeaders,
       existingServerID: existingServerID
     )
+    servers[connectionID]?.update(with: response.value)
+    return connectionID
   }
 
   func refreshToken(for server: Server) async throws -> Credentials {

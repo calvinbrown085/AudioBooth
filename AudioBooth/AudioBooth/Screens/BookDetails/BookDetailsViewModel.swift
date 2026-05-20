@@ -283,7 +283,8 @@ final class BookDetailsViewModel: BookDetailsView.Model {
     let isEbook = mediaType?.contains(.ebook) == true
 
     if isEbook {
-      self.ereaderDevices = miscService.ereaderDevices.compactMap(\.name)
+      self.ereaderDevices =
+        authenticationService.server?.ereaderDevices.compactMap(\.name) ?? []
     }
 
     let durationText: String?
