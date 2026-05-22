@@ -54,6 +54,16 @@ struct PlayerPreferencesView: View {
           )
         }
         .listRowBackground(theme.colors.background.card)
+
+        Toggle(isOn: $preferences.mixWithOtherAudio) {
+          PreferenceRow(
+            systemImage: "speaker.wave.2",
+            tint: .blue,
+            title: "Mix with Other Audio",
+            subtitle: "Play alongside music from other apps"
+          )
+        }
+        .listRowBackground(theme.colors.background.card)
       } header: {
         Text("Behavior")
       }

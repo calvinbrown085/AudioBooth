@@ -332,7 +332,8 @@ extension PlayerManager {
   private func setupRemoteCommandCenter() {
     do {
       let audioSession = AVAudioSession.sharedInstance()
-      try audioSession.setCategory(.playback, mode: .spokenAudio, policy: .longFormAudio)
+      let options: AVAudioSession.CategoryOptions = userPreferences.mixWithOtherAudio ? [.mixWithOthers] : []
+      try audioSession.setCategory(.playback, mode: .spokenAudio, policy: .longFormAudio, options: options)
       if audioSession.isCarPlayConnected || !audioSession.secondaryAudioShouldBeSilencedHint {
         try audioSession.setActive(true)
       }

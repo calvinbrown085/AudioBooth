@@ -94,6 +94,9 @@ final class UserPreferences: ObservableObject {
   @AppStorage("keepScreenAwakeInPlayer")
   var keepScreenAwakeInPlayer: Bool = false
 
+  @AppStorage("mixWithOtherAudio")
+  var mixWithOtherAudio: Bool = false
+
   @AppStorage("volumeLevel")
   var volumeLevel: Double = 1.0
 
