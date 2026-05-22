@@ -49,6 +49,25 @@ struct LockScreenPreferencesView: View {
         Text("Chapter title and cover art are controlled from Playback Display.")
           .font(.caption)
       }
+
+      if #available(iOS 26.0, *) {
+        Section {
+          Toggle(isOn: $preferences.lockScreenImmersiveCover) {
+            PreferenceRow(
+              systemImage: "rectangle.portrait.fill",
+              tint: .indigo,
+              title: "Immersive Cover",
+              subtitle: "Show the cover full screen on the Lock Screen player"
+            )
+          }
+          .listRowBackground(theme.colors.background.card)
+        } header: {
+          Text("Appearance")
+        } footer: {
+          Text("Fills the expanded Now Playing view with the book cover.")
+            .font(.caption)
+        }
+      }
     }
     .scrollContentBackground(.hidden)
     .background(theme.colors.background.page)

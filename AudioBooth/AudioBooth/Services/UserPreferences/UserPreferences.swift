@@ -67,6 +67,9 @@ final class UserPreferences: ObservableObject {
   @AppStorage("lockScreenAllowPlaybackPositionChange")
   var lockScreenAllowPlaybackPositionChange: Bool = true
 
+  @AppStorage("lockScreenImmersiveCover")
+  var lockScreenImmersiveCover: Bool = false
+
   @AppStorage("timeRemainingAdjustsWithSpeed")
   var timeRemainingAdjustsWithSpeed: Bool = true
 

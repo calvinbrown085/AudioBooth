@@ -13,6 +13,7 @@ final class NowPlayingManager {
   private let title: String
   private let author: String?
   private var artwork: MPMediaItemArtwork?
+  private var animatedArtwork: Any?
   private let preferences = UserPreferences.shared
   private var playbackState: MPNowPlayingPlaybackState = .paused
 
@@ -41,6 +42,7 @@ final class NowPlayingManager {
     info[MPNowPlayingInfoPropertyExternalUserProfileIdentifier] = Audiobookshelf.shared.authentication.server?.id
 
     info[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
+    info[MPMediaItemPropertyMediaType] = MPMediaType.audioBook.rawValue
     info[MPMediaItemPropertyTitle] = title
     info[MPMediaItemPropertyArtist] = author
 
@@ -124,6 +126,7 @@ final class NowPlayingManager {
   private func observePreferenceChanges() {
     withObservationTracking {
       _ = preferences.showFullBookDuration
+      _ = preferences.lockScreenImmersiveCover
     } onChange: { [weak self] in
       guard let self else { return }
       RunLoop.main.perform {
@@ -137,6 +140,16 @@ final class NowPlayingManager {
     guard let player, let mediaProgress else { return }
 
     info[MPMediaItemPropertyArtwork] = artwork
+
+    if #available(iOS 26.0, *) {
+      if preferences.lockScreenImmersiveCover,
+        let animatedArtwork = animatedArtwork as? MPMediaItemAnimatedArtwork
+      {
+        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = animatedArtwork
+      } else {
+        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = nil
+      }
+    }
 
     playbackState = player.isPlaying ? .playing : .paused
     info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = player.rate
@@ -166,16 +179,44 @@ final class NowPlayingManager {
 }
 
 extension NowPlayingManager {
+  private static func aspectFilled(image: UIImage, into targetSize: CGSize) -> UIImage {
+    guard targetSize.width > 0, targetSize.height > 0 else { return image }
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = true
+    return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+      let scale = max(targetSize.width / image.size.width, targetSize.height / image.size.height)
+      let scaledSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+      let origin = CGPoint(
+        x: (targetSize.width - scaledSize.width) / 2,
+        y: (targetSize.height - scaledSize.height) / 2
+      )
+      image.draw(in: CGRect(origin: origin, size: scaledSize))
+    }
+  }
+
   private func loadArtwork(from url: URL) {
     Task {
       do {
-        let request = ImageRequest(url: url)
+        let request = ImageRequest(url: url, processors: [], priority: .high)
         let image = try await ImagePipeline.shared.image(for: request)
 
         artwork = MPMediaItemArtwork(
           boundsSize: image.size,
           requestHandler: { _ in image }
         )
+
+        if #available(iOS 26.0, *) {
+          animatedArtwork = MPMediaItemAnimatedArtwork(
+            artworkID: "\(id)-\(url.absoluteString)",
+            previewImageRequestHandler: { size in
+              Self.aspectFilled(image: image, into: size)
+            },
+            videoAssetFileURLRequestHandler: { _ in
+              nil
+            }
+          )
+        }
 
         info[MPMediaItemPropertyArtwork] = artwork
         update()
