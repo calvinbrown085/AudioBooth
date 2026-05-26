@@ -110,6 +110,22 @@ struct BookDetailsView: View {
                 Label("Download", systemImage: "arrow.down.circle")
               }
             }
+
+            if model.canDownloadToWatch {
+              Button(action: { model.onDownloadToWatchTapped() }) {
+                switch model.watchDownloadState {
+                case .downloading(let progress):
+                  Label(
+                    "Cancel Apple Watch Download (\(Int(progress * 100))%)",
+                    systemImage: "stop.circle"
+                  )
+                case .downloaded:
+                  Label("Remove from Apple Watch", systemImage: "applewatch.slash")
+                case .notDownloaded:
+                  Label("Download to Apple Watch", systemImage: "applewatch")
+                }
+              }
+            }
           }
 
           if model.actions.contains(.addToQueue) {
@@ -645,6 +661,8 @@ extension BookDetailsView {
     var coverURL: URL?
     var progress: (audio: Double, ebook: Double)
     var downloadState: DownloadManager.DownloadState
+    var watchDownloadState: DownloadManager.DownloadState = .notDownloaded
+    var canDownloadToWatch: Bool = false
     var isLoading: Bool
     var isPlaying: Bool
     var flags: Flags
@@ -666,6 +684,7 @@ extension BookDetailsView {
     func onReadTapped() {}
     func onOpenTapped() {}
     func onDownloadTapped() {}
+    func onDownloadToWatchTapped() {}
     func onMarkFinishedTapped() {}
     func onResetProgressTapped() {}
     func onWriteTagTapped() {}

@@ -65,6 +65,23 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         self?.sendDownloadedBookIDs(downloadedBookIDs)
       }
       .store(in: &cancellables)
+
+    DownloadManager.shared.$currentProgress
+      .removeDuplicates()
+      .throttle(for: .milliseconds(500), scheduler: DispatchQueue.main, latest: true)
+      .sink { [weak self] progress in
+        self?.sendDownloadProgress(progress)
+      }
+      .store(in: &cancellables)
+  }
+
+  private func sendDownloadProgress(_ progress: [String: Double]) {
+    guard let session, session.isReachable else { return }
+    let message: [String: Any] = [
+      "command": "watchDownloadProgress",
+      "progress": progress,
+    ]
+    session.sendMessage(message, replyHandler: nil, errorHandler: nil)
   }
 
   private func loadPersistedState() {
@@ -410,6 +427,29 @@ extension WatchConnectivityManager: WCSessionDelegate {
   private func handleMessage(_ message: [String: Any]) {
     if let progressData = message["progress"] as? [String: Double] {
       handleProgress(progressData)
+    }
+
+    guard let command = message["command"] as? String else { return }
+    switch command {
+    case "startWatchDownload":
+      guard let bookDict = message["book"] as? [String: Any],
+        let placeholder = WatchBook(dictionary: bookDict)
+      else {
+        AppLogger.watchConnectivity.error("startWatchDownload missing or invalid book payload")
+        return
+      }
+      DownloadManager.shared.startDownload(for: placeholder)
+
+    case "cancelWatchDownload":
+      guard let bookID = message["bookID"] as? String else { return }
+      DownloadManager.shared.cancelDownload(for: bookID)
+
+    case "removeWatchDownload":
+      guard let bookID = message["bookID"] as? String else { return }
+      DownloadManager.shared.deleteDownload(for: bookID)
+
+    default:
+      break
     }
   }
 

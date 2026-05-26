@@ -8,15 +8,13 @@
 	<array>
 		<string>TAG</string>
 	</array>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(ORG_IDENTIFIER).AudioBS</string>
 	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.$(ORG_IDENTIFIER).audioBS</string>
-	</array>
+	<array/>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)$(ORG_IDENTIFIER).AudioBS</string>
 	</array>
-	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
-	<string>$(TeamIdentifierPrefix)$(ORG_IDENTIFIER).AudioBS</string>
 </dict>
 </plist>

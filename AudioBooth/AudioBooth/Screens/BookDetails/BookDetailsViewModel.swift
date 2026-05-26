@@ -14,6 +14,7 @@ final class BookDetailsViewModel: BookDetailsView.Model {
   private var downloadManager: DownloadManager { .shared }
   private var playerManager: PlayerManager { .shared }
   private var authenticationService: AuthenticationService { Audiobookshelf.shared.authentication }
+  private var watchConnectivity: WatchConnectivityManager { .shared }
 
   private var cancellables = Set<AnyCancellable>()
   private var progressObservation: Task<Void, Never>?
@@ -379,6 +380,24 @@ final class BookDetailsViewModel: BookDetailsView.Model {
         self.downloadState = states[bookID] ?? .notDownloaded
       }
       .store(in: &cancellables)
+
+    watchConnectivity.$canDownloadToWatch
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] value in
+        self?.canDownloadToWatch = value
+      }
+      .store(in: &cancellables)
+
+    Publishers.CombineLatest(
+      watchConnectivity.$watchDownloadProgress,
+      watchConnectivity.$watchDownloadedBookIDs
+    )
+    .receive(on: DispatchQueue.main)
+    .sink { [weak self] _, _ in
+      guard let self else { return }
+      self.watchDownloadState = self.watchConnectivity.watchDownloadState(for: self.bookID)
+    }
+    .store(in: &cancellables)
   }
 
   private func setupItemObservation() {
@@ -549,6 +568,32 @@ final class BookDetailsViewModel: BookDetailsView.Model {
       }
       downloadState = .downloading(progress: 0)
       try? book.download()
+    }
+  }
+
+  override func onDownloadToWatchTapped() {
+    switch watchDownloadState {
+    case .downloading:
+      watchConnectivity.sendCancelWatchDownload(bookID: bookID)
+      watchDownloadState = .notDownloaded
+
+    case .downloaded:
+      watchConnectivity.sendRemoveWatchDownload(bookID: bookID)
+      watchDownloadState = .notDownloaded
+
+    case .notDownloaded:
+      guard let book else {
+        Toast(error: "Cannot download without network connection").show()
+        return
+      }
+      watchConnectivity.sendStartWatchDownload(
+        bookID: bookID,
+        title: book.title,
+        authorName: book.authorName,
+        coverURL: book.coverURL(raw: true),
+        duration: book.duration
+      )
+      watchDownloadState = .downloading(progress: 0)
     }
   }
 

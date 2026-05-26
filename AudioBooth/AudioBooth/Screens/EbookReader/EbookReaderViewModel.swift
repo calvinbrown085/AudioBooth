@@ -439,7 +439,7 @@ final class EbookReaderViewModel: EbookReaderView.Model {
     var location = navigator?.currentLocation
     location?.locations.totalProgression = nil
 
-    let ebookLocation = location?.jsonString
+    let ebookLocation = try? location?.jsonString()
 
     try? MediaProgress.updateEbookProgress(
       for: bookID,

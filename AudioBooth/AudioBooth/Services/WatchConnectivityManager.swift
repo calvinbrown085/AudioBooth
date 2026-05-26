@@ -15,18 +15,47 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     static let watchDownloadedBookIDs = "watch_downloaded_book_ids"
   }
 
-  var watchDownloadedBookIDs: [String] {
-    get { UserDefaults.standard.stringArray(forKey: Keys.watchDownloadedBookIDs) ?? [] }
-    set { UserDefaults.standard.set(newValue, forKey: Keys.watchDownloadedBookIDs) }
+  @Published private(set) var watchDownloadedBookIDs: [String] = [] {
+    didSet {
+      UserDefaults.standard.set(watchDownloadedBookIDs, forKey: Keys.watchDownloadedBookIDs)
+    }
   }
+  @Published private(set) var watchDownloadProgress: [String: Double] = [:]
+  @Published private(set) var canDownloadToWatch: Bool = false
 
   private override init() {
     super.init()
+
+    watchDownloadedBookIDs = UserDefaults.standard.stringArray(forKey: Keys.watchDownloadedBookIDs) ?? []
 
     if WCSession.isSupported() {
       session = WCSession.default
       session?.delegate = self
       session?.activate()
+    }
+  }
+
+  func watchDownloadState(for bookID: String) -> DownloadManager.DownloadState {
+    if let progress = watchDownloadProgress[bookID] {
+      return .downloading(progress: progress)
+    }
+    if watchDownloadedBookIDs.contains(bookID) {
+      return .downloaded
+    }
+    return .notDownloaded
+  }
+
+  func resetWatchDownloadTracking() {
+    watchDownloadedBookIDs = []
+    watchDownloadProgress = [:]
+  }
+
+  private func refreshCanDownloadToWatch() {
+    let value =
+      session?.activationState == .activated && session?.isPaired == true
+      && session?.isWatchAppInstalled == true
+    Task { @MainActor in
+      if canDownloadToWatch != value { canDownloadToWatch = value }
     }
   }
 
@@ -199,6 +228,61 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     updateContext()
   }
 
+  func sendStartWatchDownload(
+    bookID: String,
+    title: String,
+    authorName: String?,
+    coverURL: URL?,
+    duration: Double
+  ) {
+    var book: [String: Any] = [
+      "id": bookID,
+      "title": title,
+      "duration": duration,
+    ]
+    if let authorName { book["author"] = authorName }
+    if let coverURLString = watchCompatibleCoverURL(from: coverURL) {
+      book["coverURL"] = coverURLString
+    }
+
+    sendCommand("startWatchDownload", extra: ["book": book])
+
+    Task { @MainActor in
+      watchDownloadProgress[bookID] = 0
+    }
+  }
+
+  func sendCancelWatchDownload(bookID: String) {
+    sendCommand("cancelWatchDownload", extra: ["bookID": bookID])
+    Task { @MainActor in
+      watchDownloadProgress.removeValue(forKey: bookID)
+    }
+  }
+
+  func sendRemoveWatchDownload(bookID: String) {
+    sendCommand("removeWatchDownload", extra: ["bookID": bookID])
+    Task { @MainActor in
+      watchDownloadedBookIDs.removeAll { $0 == bookID }
+      watchDownloadProgress.removeValue(forKey: bookID)
+    }
+  }
+
+  private func sendCommand(_ command: String, extra: [String: Any] = [:]) {
+    guard let session, session.activationState == .activated, session.isReachable else {
+      AppLogger.watchConnectivity.warning(
+        "Cannot send command '\(command)' to watch - session not reachable"
+      )
+      return
+    }
+    var message: [String: Any] = extra
+    message["command"] = command
+    session.sendMessage(message, replyHandler: nil) { error in
+      AppLogger.watchConnectivity.error(
+        "Failed to send '\(command)' to watch: \(error)"
+      )
+    }
+  }
+
   private func watchCompatibleCoverURL(from url: URL?) -> String? {
     guard let url = url else { return nil }
 
@@ -231,6 +315,16 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
       }
     }
+
+    refreshCanDownloadToWatch()
+  }
+
+  func sessionWatchStateDidChange(_ session: WCSession) {
+    refreshCanDownloadToWatch()
+  }
+
+  func sessionReachabilityDidChange(_ session: WCSession) {
+    refreshCanDownloadToWatch()
   }
 
   private func syncCachedDataToWatch() {
@@ -313,10 +407,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
       case "syncDownloadedBooks":
         if let bookIDs = message["bookIDs"] as? [String] {
           watchDownloadedBookIDs = bookIDs
+          for id in bookIDs { watchDownloadProgress.removeValue(forKey: id) }
           AppLogger.watchConnectivity.info(
             "Received \(bookIDs.count) downloaded book IDs from watch"
           )
           refreshProgress()
+        }
+      case "watchDownloadProgress":
+        if let progress = message["progress"] as? [String: Double] {
+          watchDownloadProgress = progress
         }
       default:
         AppLogger.watchConnectivity.warning(

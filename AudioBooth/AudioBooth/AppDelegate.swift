@@ -42,6 +42,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
       } catch {
         AppLogger.general.error("Failed to switch database: \(error.localizedDescription)")
       }
+      WatchConnectivityManager.shared.resetWatchDownloadTracking()
     }
 
     if let server = Audiobookshelf.shared.authentication.server {
