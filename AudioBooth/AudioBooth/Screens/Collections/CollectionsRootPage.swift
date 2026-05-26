@@ -51,14 +51,17 @@ private struct CollectionsRootContent: View {
   @StateObject private var playlists = CollectionsPageModel(mode: .playlists)
 
   var body: some View {
-    switch selected {
-    case .series:
-      SeriesPage(model: series)
-    case .collections:
-      CollectionsPage(model: collections)
-    case .playlists:
-      CollectionsPage(model: playlists)
+    Group {
+      switch selected {
+      case .series:
+        SeriesPage(model: series)
+      case .collections:
+        CollectionsPage(model: collections)
+      case .playlists:
+        CollectionsPage(model: playlists)
+      }
     }
+    .animation(nil, value: selected)
   }
 }
 
