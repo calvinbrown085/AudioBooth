@@ -51,14 +51,20 @@ private struct CollectionsRootContent: View {
   @StateObject private var playlists = CollectionsPageModel(mode: .playlists)
 
   var body: some View {
-    switch selected {
-    case .series:
-      SeriesPage(model: series)
-    case .collections:
-      CollectionsPage(model: collections)
-    case .playlists:
-      CollectionsPage(model: playlists)
+    ZStack {
+      switch selected {
+      case .series:
+        SeriesPage(model: series)
+          .transition(.opacity)
+      case .collections:
+        CollectionsPage(model: collections)
+          .transition(.opacity)
+      case .playlists:
+        CollectionsPage(model: playlists)
+          .transition(.opacity)
+      }
     }
+    .animation(.easeInOut(duration: 0.2), value: selected)
   }
 }
 

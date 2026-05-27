@@ -51,14 +51,20 @@ private struct LibraryRootContent: View {
   @StateObject private var narrators = NarratorsPageModel()
 
   var body: some View {
-    switch selected {
-    case .library:
-      LibraryPage(model: library)
-    case .authors:
-      AuthorsPage(model: authors)
-    case .narrators:
-      NarratorsPage(model: narrators)
+    ZStack {
+      switch selected {
+      case .library:
+        LibraryPage(model: library)
+          .transition(.opacity)
+      case .authors:
+        AuthorsPage(model: authors)
+          .transition(.opacity)
+      case .narrators:
+        NarratorsPage(model: narrators)
+          .transition(.opacity)
+      }
     }
+    .animation(.easeInOut(duration: 0.2), value: selected)
   }
 }
 
